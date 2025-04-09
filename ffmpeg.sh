@@ -124,11 +124,11 @@ stream_start() {
                         DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"\$video\")
 
                         echo \"正在推流: \$video\" >> \"$LOG_FILE\"
-                        echo \"⚙️ Filters: Brightness=$BRIGHTNESS, Contrast=$CONTRAST, Volume=$VOLUME, Freq=${FREQ}Hz, Alpha=$ALPHA, Resolution=\$RESOLUTION\" >> \"$LOG_FILE\"
+                        echo \"⚙️ Filters: Brightness=$BRIGHTNESS, Contrast=$CONTRAST, Volume=$VOLUME, Freq=${FREQ}Hz, Alpha=$ALPHA, Resolution=\$RESOLUTION, Duration=\$DURATION\" >> \"$LOG_FILE\"
 
                         if [ \"\$HAS_AUDIO\" == \"audio\" ]; then
                             ffmpeg -re -i \"\$video\" \
-                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
+                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\:d=\$DURATION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
                                 [0:v][1:v]overlay=format=auto[tmpv]; \

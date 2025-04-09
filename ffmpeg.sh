@@ -109,56 +109,48 @@ stream_start() {
 
 
     echo -e "${yellow}开始后台推流。${font}"
-    nohup bash -c '
-        while true; do
-            rotate_log
-            clean_old_logs
-            video_files=("'$VIDEO_FOLDER'"/*.mp4)
-            if [ ${#video_files[@]} -eq 0 ]; then
-                echo "没有找到mp4文件，请检查并重试..." >> "'$LOG_FILE'"
-                sleep 10
-                continue
-            fi
-            for video in "${video_files[@]}"; do
-                if [ -f "$video" ]; then
-                    # 获取输入分辨率
-                    HAS_AUDIO="$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 "\$video")"
-                    RESOLUTION="$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "\$video")"
-                    DURATION="$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "\$video")"
-                    echo "正在推流: $video" >> "'$LOG_FILE'"
-
-                    echo "⚙️ Applying Filters:"
-                    echo "  Brightness: '$BRIGHTNESS'"
-                    echo "  Contrast:   '$CONTRAST'"
-                    echo "  Volume:     '$VOLUME'"
-                    echo "  Freq:       '$FREQ' Hz"
-                    echo "  Alpha:      '$ALPHA'"
-                    echo "  Resolution: '$RESOLUTION'"
-                    echo "  DURATION: '$DURATION'"
-                    echo ""
-                    if [ "$HAS_AUDIO" == "audio" ]; then
-                      ffmpeg -re -i "$video" \
-                       -f lavfi -i "color=black@${ALPHA}:s=\${RESOLUTION}" \
-                       -f lavfi -i "sine=frequency=${FREQ}:duration=\${DURATION}:sample_rate=44100" \
-                       -filter_complex "\
-                       [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
-                       [0:a][2:a]amix=inputs=2:duration=first:weights='"1 0.0001"',volume=${VOLUME}[aout]" \
-                       -map "[vout]" -map "[aout]" \
-                       -c:v libx264 -preset veryfast -tune zerolatency -b:v "'$BITRATE'" -r "'$FRAMERATE'" -g 50 -c:a aac -b:a 128k -f flv "'$RTMP_URL'" 2>> "'$LOG_FILE'" || true
-                    else
-                    ffmpeg -re -i "$video" \
-                                           -f lavfi -i "color=black@${ALPHA}:s=\${RESOLUTION}" \
-                                           -f lavfi -i "sine=frequency=${FREQ}:duration=\${DURATION}:sample_rate=44100" \
-                                           -filter_complex "\
-                                           [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]" \
-                                           -map "[vout]" -map 2:a \
-                                           -c:v libx264 -preset veryfast -tune zerolatency -b:v "'$BITRATE'" -r "'$FRAMERATE'" -g 50 -c:a aac -b:a 128k -f flv "'$RTMP_URL'" 2>> "'$LOG_FILE'" || true
-                    fi
-
+    nohup bash -c "
+            while true; do
+                rotate_log
+                clean_old_logs
+                video_files=(\"$VIDEO_FOLDER\"/*.mp4)
+                if [ \${#video_files[@]} -eq 0 ]; then
+                    echo \"没有找到mp4文件，请检查并重试...\" >> \"$LOG_FILE\"
+                    sleep 10
+                    continue
                 fi
+                for video in \"\${video_files[@]}\"; do
+                    if [ -f \"\$video\" ]; then
+                        HAS_AUDIO=\$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 \"\$video\")
+                        RESOLUTION=\$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x \"\$video\")
+                        DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"\$video\")
+
+                        echo \"正在推流: \$video\" >> \"$LOG_FILE\"
+                        echo \"⚙️ Filters: Brightness=$BRIGHTNESS, Contrast=$CONTRAST, Volume=$VOLUME, Freq=${FREQ}Hz, Alpha=$ALPHA, Resolution=\$RESOLUTION\" >> \"$LOG_FILE\"
+
+                        if [ \"\$HAS_AUDIO\" == \"audio\" ]; then
+                            ffmpeg -re -i \"\$video\" \
+                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
+                                -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
+                                -filter_complex \"\
+                                [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
+                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001',volume=${VOLUME}[aout]\" \
+                                -map \"[vout]\" -map \"[aout]\" \
+                                -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
+                                -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
+                        else
+                            ffmpeg -re -i \"\$video\" \
+                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
+                                -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
+                                -filter_complex \"[0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]\" \
+                                -map \"[vout]\" -map 2:a \
+                                -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
+                                -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
+                        fi
+                    fi
+                done
             done
-        done
-    ' > ./ffmpeg_stream-`date +%Y-%m-%d`.log  2>&1 &
+        " > ./ffmpeg_stream-$(date +%Y-%m-%d).log 2>&1 &
 
     echo $! > /var/run/ffmpeg_stream.pid
 }

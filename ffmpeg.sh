@@ -92,6 +92,26 @@ stream_start() {
         save_config
     fi
 
+    # 🎲 随机参数生成
+    brightness=$(awk 'BEGIN{srand(); printf("%.5f", (rand()*0.004 - 0.002))}')
+    contrast=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.002 - 0.001))}')
+    scale_factor=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.002 - 0.001))}')
+    noise_strength=$(shuf -i 1-3 -n 1)
+    volume=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.001 - 0.0005))}')
+    rotate=$(awk 'BEGIN{srand(); printf("%.5f", (rand()*0.2 - 0.1)*PI/180)}') # 转换为弧度
+    pad_x=$(shuf -i 0-2 -n 1)
+    pad_y=$(shuf -i 0-2 -n 1)
+
+    # 👀 显示扰动参数
+    echo "🎛️ 随机扰动参数："
+    echo "Brightness:  $brightness"
+    echo "Contrast:    $contrast"
+    echo "Scale:       $scale_factor"
+    echo "Noise:       $noise_strength"
+    echo "Rotate(rad): $rotate"
+    echo "Pad:         x=$pad_x y=$pad_y"
+    echo "Volume:      $volume"
+
     echo -e "${yellow}开始后台推流。${font}"
     nohup bash -c '
         while true; do
@@ -103,11 +123,15 @@ stream_start() {
                 sleep 10
                 continue
             fi
+            # 💥 滤镜组合：缩放 → 旋转 → pad → EQ → noise → 缩放还原
             for video in "${video_files[@]}"; do
                 if [ -f "$video" ]; then
                     echo "正在推流: $video" >> "'$LOG_FILE'"
-                    ffmpeg -re -i "$video" -c:v libx264 -preset veryfast -tune zerolatency -b:v '$BITRATE' -r '$FRAMERATE' -c:a aac -b:a 92k -f flv "'$RTMP_URL'" 2>> "'$LOG_FILE'" || true
-                    sleep 1
+                    ffmpeg -re -i "$video" \
+                       -vf "'scale=iw*${scale_factor}:ih*${scale_factor},rotate=${rotate}:c=black@0.0001:ow=iw:oh=ih,pad=iw+${pad_x}:ih+${pad_y}:color=black@0.0001,eq=brightness=${brightness}:contrast=${contrast},noise=alls=${noise_strength}:allf=t,scale=iw:ih'" \
+                       -af volume=${volume} \
+                       -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
+                       -c:a aac -b:a 128k -f flv "$RTMP_URL" 2>> "$LOG_FILE" || true
                 fi
             done
         done

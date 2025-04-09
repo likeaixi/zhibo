@@ -128,7 +128,7 @@ stream_start() {
 
                         if [ \"\$HAS_AUDIO\" == \"audio\" ]; then
                             ffmpeg -re -i \"\$video\" \
-                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\:d=\$DURATION\" \
+                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
                                 [0:v][1:v]overlay=format=auto[tmpv]; \
@@ -140,7 +140,7 @@ stream_start() {
                                 -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
                         else
                             ffmpeg -re -i \"\$video\" \
-                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
+                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
                                   [0:v][1:v]overlay=format=auto[tmpv]; \

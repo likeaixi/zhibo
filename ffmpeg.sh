@@ -111,8 +111,6 @@ stream_start() {
     echo -e "${yellow}开始后台推流。${font}"
     nohup bash -c "
             while true; do
-                rotate_log
-                clean_old_logs
                 video_files=(\"$VIDEO_FOLDER\"/*.mp4)
                 if [ \${#video_files[@]} -eq 0 ]; then
                     echo \"没有找到mp4文件，请检查并重试...\" >> \"$LOG_FILE\"

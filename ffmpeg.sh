@@ -131,7 +131,8 @@ stream_start() {
                                 -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
-                                [0:v][1:v]overlay=shortest=1[tmpv]; \
+                                [1:v]format=yuv420p[bg];
+                                [0:v][bg]overlay=format=auto[tmpv]; \
                                 [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
                                 [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001'[amixed]; \
                                 [amixed]volume=${VOLUME}[aout]\" \
@@ -143,7 +144,8 @@ stream_start() {
                                 -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
-                                  [0:v][1:v]overlay=shortest=1[tmpv]; \
+                                  [1:v]format=yuv420p[bg];
+                                  [0:v][bg]overlay=format=auto[tmpv]; \
                                   [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout] \" \
                                   -map \"[vout]\" \
                                 -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \

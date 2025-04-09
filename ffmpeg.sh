@@ -92,21 +92,26 @@ stream_start() {
         save_config
     fi
 
-    # === 随机参数生成 ===
 
-    # 微亮度/对比度（±0.0001 ~ ±0.0005）
-    BRIGHTNESS=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
-    CONTRAST=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (rand() * 0.0005))}')
+    # 🎲 随机参数生成
+    brightness=$(awk 'BEGIN{srand(); printf("%.5f", (rand()*0.004 - 0.002))}')
+    contrast=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.002 - 0.001))}')
+    scale_factor=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.002 - 0.001))}')
+    noise_strength=$(shuf -i 1-3 -n 1)
+    volume=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.001 - 0.0005))}')
+    rotate=$(awk 'BEGIN{srand(); printf("%.5f", (rand()*0.2 - 0.1)*PI/180)}') # 转换为弧度
+    pad_x=$(shuf -i 0-2 -n 1)
+    pad_y=$(shuf -i 0-2 -n 1)
 
-    # 音量调整（1 ± 0.0001~0.0005）
-    VOLUME=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
-
-    # 高频音频频率 (19500Hz ~ 20000Hz)
-    FREQ=$(shuf -i 19500-20000 -n 1)
-
-    # 透明度 (alpha 0.001 ~ 0.005)
-    ALPHA=$(awk 'BEGIN{srand(); printf("%.4f", 0.001 + rand() * 0.004)}')
-
+    # 👀 显示扰动参数
+    echo "🎛️ 随机扰动参数："
+    echo "Brightness:  $brightness"
+    echo "Contrast:    $contrast"
+    echo "Scale:       $scale_factor"
+    echo "Noise:       $noise_strength"
+    echo "Rotate(rad): $rotate"
+    echo "Pad:         x=$pad_x y=$pad_y"
+    echo "Volume:      $volume"
 
     echo -e "${yellow}开始后台推流。${font}"
     nohup bash -c "
@@ -119,38 +124,13 @@ stream_start() {
                 fi
                 for video in \"\${video_files[@]}\"; do
                     if [ -f \"\$video\" ]; then
-                        HAS_AUDIO=\$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 \"\$video\")
-                        RESOLUTION=\$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x \"\$video\")
-                        DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"\$video\")
-
                         echo \"正在推流: \$video\" >> \"$LOG_FILE\"
-                        echo \"⚙️ Filters: Brightness=$BRIGHTNESS, Contrast=$CONTRAST, Volume=$VOLUME, Freq=${FREQ}Hz, Alpha=$ALPHA, Resolution=\$RESOLUTION, Duration=\$DURATION\" >> \"$LOG_FILE\"
-
-                        if [ \"\$HAS_AUDIO\" == \"audio\" ]; then
-                            ffmpeg -re -i \"\$video\" \
-                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
-                                -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
-                                -filter_complex \"\
-                                [1:v]format=yuv420p[bg];
-                                [0:v][bg]overlay=format=auto[tmpv]; \
-                                [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
-                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001'[amixed]; \
-                                [amixed]volume=${VOLUME}[aout]\" \
-                                -map \"[vout]\" -map \"[aout]\" \
+                        # 💥 滤镜组合：缩放 → 旋转 → pad → EQ → noise → 缩放还原
+                        ffmpeg -re -i \"\$video\" \
+                                -vf "scale=iw*${scale_factor}:ih*${scale_factor},rotate=${rotate}:c=black@0.0001:ow=iw:oh=ih,pad=iw+${pad_x}:ih+${pad_y}:color=black@0.0001,eq=brightness=${brightness}:contrast=${contrast},noise=alls=${noise_strength}:allf=t,scale=iw:ih" \
+                                -af volume=${volume} \
                                 -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
                                 -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
-                        else
-                            ffmpeg -re -i \"\$video\" \
-                                -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION:d=\$DURATION\" \
-                                -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
-                                -filter_complex \"\
-                                  [1:v]format=yuv420p[bg];
-                                  [0:v][bg]overlay=format=auto[tmpv]; \
-                                  [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout] \" \
-                                  -map \"[vout]\" \
-                                -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
-                                -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
-                        fi
                     fi
                 done
             done

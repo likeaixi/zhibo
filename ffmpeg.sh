@@ -145,7 +145,7 @@ stream_start() {
                 fi
             done
         done
-    ' > /dev/null 2>&1 &
+    ' > ./ffmpeg_stream-`date +%Y-%m-%d`.log  2>&1 &
 
     echo $! > /var/run/ffmpeg_stream.pid
 }

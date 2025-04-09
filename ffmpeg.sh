@@ -122,9 +122,9 @@ stream_start() {
             for video in "${video_files[@]}"; do
                 if [ -f "$video" ]; then
                     # 获取输入分辨率
-                    HAS_AUDIO="'$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 "\$video")'"
-                    RESOLUTION="'$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "\$video")'"
-                    DURATION="'$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "\$video")'"
+                    HAS_AUDIO="'$(ffprobe -v error -select_streams a -show_entries stream=codec_type -of default=noprint_wrappers=1:nokey=1 $video)'"
+                    RESOLUTION="'$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x $video)'"
+                    DURATION="'$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $video)'"
                     echo "正在推流: $video" >> "'$LOG_FILE'"
 
                     echo "⚙️ Applying Filters:"

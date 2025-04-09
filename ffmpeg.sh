@@ -92,7 +92,6 @@ stream_start() {
         save_config
     fi
 
-
     # 🎲 随机参数生成
     brightness=$(awk 'BEGIN{srand(); printf("%.5f", (rand()*0.004 - 0.002))}')
     contrast=$(awk 'BEGIN{srand(); printf("%.5f", 1 + (rand()*0.002 - 0.001))}')

@@ -150,7 +150,6 @@ stream_start() {
                                            -f lavfi -i "sine=frequency=${FREQ}:duration=\${DURATION}:sample_rate=44100" \
                                            -filter_complex "\
                                            [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
-                                           [0:a][2:a]amix=inputs=2:duration=first:weights='"1 0.0001"',volume=${VOLUME}[aout]" \
                                            -map "[vout]" -map 2:a \
                                            -c:v libx264 -preset veryfast -tune zerolatency -b:v '$BITRATE' -r '$FRAMERATE' -g 50 -c:a aac -b:a 128k -f flv "'$RTMP_URL'" 2>> "'$LOG_FILE'" || true
                     fi

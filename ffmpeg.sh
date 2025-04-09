@@ -113,27 +113,29 @@ stream_start() {
     echo "Volume:      $volume"
 
     echo -e "${yellow}开始后台推流。${font}"
-    nohup bash -c "
-            while true; do
-                video_files=(\"$VIDEO_FOLDER\"/*.mp4)
-                if [ \${#video_files[@]} -eq 0 ]; then
-                    echo \"没有找到mp4文件，请检查并重试...\" >> \"$LOG_FILE\"
-                    sleep 10
-                    continue
+    nohup bash -c '
+        while true; do
+            rotate_log
+            clean_old_logs
+            video_files=("'$VIDEO_FOLDER'"/*.mp4)
+            if [ ${#video_files[@]} -eq 0 ]; then
+                echo "没有找到mp4文件，请检查并重试..." >> "'$LOG_FILE'"
+                sleep 10
+                continue
+            fi
+            # 💥 滤镜组合：缩放 → 旋转 → pad → EQ → noise → 缩放还原
+            for video in "${video_files[@]}"; do
+                if [ -f "$video" ]; then
+                    echo "正在推流: $video" >> "'$LOG_FILE'"
+                    ffmpeg -re -i "$video" \
+                       -vf "'scale=iw*${scale_factor}:ih*${scale_factor},rotate=${rotate}:c=black@0.0001:ow=iw:oh=ih,pad=iw+${pad_x}:ih+${pad_y}:color=black@0.0001,eq=brightness=${brightness}:contrast=${contrast},noise=alls=${noise_strength}:allf=t,scale=iw:ih'" \
+                       -af volume=${volume} \
+                       -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
+                       -c:a aac -b:a 128k -f flv "$RTMP_URL" 2>> "$LOG_FILE" || true
                 fi
-                for video in \"\${video_files[@]}\"; do
-                    if [ -f \"\$video\" ]; then
-                        echo \"正在推流: \$video\" >> \"$LOG_FILE\"
-                        # 💥 滤镜组合：缩放 → 旋转 → pad → EQ → noise → 缩放还原
-                        ffmpeg -re -i \"\$video\" \
-                                -vf "scale=iw*${scale_factor}:ih*${scale_factor},rotate=${rotate}:c=black@0.0001:ow=iw:oh=ih,pad=iw+${pad_x}:ih+${pad_y}:color=black@0.0001,eq=brightness=${brightness}:contrast=${contrast},noise=alls=${noise_strength}:allf=t,scale=iw:ih" \
-                                -af volume=${volume} \
-                                -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
-                                -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
-                    fi
-                done
             done
-        " > ./ffmpeg_stream-$(date +%Y-%m-%d).log 2>&1 &
+        done
+    ' > /dev/null 2>&1 &
 
     echo $! > /var/run/ffmpeg_stream.pid
 }

@@ -109,41 +109,41 @@ stream_start() {
 
 
     echo -e "${yellow}开始后台推流。${font}"
-    nohup bash -c '
+    nohup bash -c "
         while true; do
             rotate_log
-            clean_old_logs
-            video_files=("'$VIDEO_FOLDER'"/*.mp4)
-            if [ ${#video_files[@]} -eq 0 ]; then
-                echo "没有找到mp4文件，请检查并重试..." >> "'$LOG_FILE'"
-                sleep 10
-                continue
-            fi
-            for video in "${video_files[@]}"; do
-                if [ -f "$video" ]; then
-                    echo "正在推流: $video" >> "'$LOG_FILE'"
-                        # 获取输入分辨率
-                        RESOLUTION=\$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "\$video")
-                        DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "\$video")
-                        echo "⚙️ Applying Filters:"
-                        echo "  Brightness: $BRIGHTNESS"
-                        echo "  Contrast:   $CONTRAST"
-                        echo "  Volume:     $VOLUME"
-                        echo "  Freq:       $FREQ Hz"
-                        echo "  Alpha:      $ALPHA"
-                        echo "  Resolution: $RESOLUTION"
-                        echo "  DURATION: $DURATION"
-                        echo ""
-                    ffmpeg -re -i "$video" \
-                     -f lavfi -i "color=black@${ALPHA}:s=\${RESOLUTION}" \
-                     -f lavfi -i "sine=frequency=${FREQ}:duration=\${DURATION}:sample_rate=44100" \
-                     -filter_complex "[0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; [0:a][2:a]amix=inputs=2:duration=first:weights="'1 0.0001'",volume=${VOLUME}[aout]" \
-                     -map "[vout]" -map "[aout]" \
-                     -c:v libx264 -preset veryfast -tune zerolatency -b:v '$BITRATE' -r '$FRAMERATE' -g 50 -c:a aac -b:a 128k -f flv "'$RTMP_URL'" 2>> "'$LOG_FILE'" || true
+                clean_old_logs
+                video_files=(\"$VIDEO_FOLDER\"/*.mp4)
+                if [ \${#video_files[@]} -eq 0 ]; then
+                    echo \"没有找到mp4文件，请检查并重试...\" >> \"$LOG_FILE\"
+                    sleep 10
+                    continue
                 fi
-            done
+            for video in \"\${video_files[@]}\"; do
+                    if [ -f \"\$video\" ]; then
+                        echo \"正在推流: \$video\" >> \"$LOG_FILE\"
+                        RESOLUTION=\$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x \"\$video\")
+                        DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"\$video\")
+                        echo \"⚙️ Applying Filters:\"
+                        echo \"  Brightness: $BRIGHTNESS\"
+                        echo \"  Contrast:   $CONTRAST\"
+                        echo \"  Volume:     $VOLUME\"
+                        echo \"  Freq:       $FREQ Hz\"
+                        echo \"  Alpha:      $ALPHA\"
+                        echo \"  Resolution: \$RESOLUTION\"
+                        echo \"  DURATION: \$DURATION\"
+                        echo \"\"
+
+                        ffmpeg -re -i \"\$video\" \\
+                            -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \\
+                            -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \\
+                            -filter_complex \"[0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001',volume=${VOLUME}[aout]\" \\
+                            -map \"[vout]\" -map \"[aout]\" \\
+                            -c:v libx264 -preset veryfast -tune zerolatency -b:v ${BITRATE} -r ${FRAMERATE} -g 50 -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
+                    fi
+                done
         done
-    ' > ./ffmpeg_stream-`date +%Y-%m-%d`.log  2>&1 &
+    " > ./ffmpeg_stream-`date +%Y-%m-%d`.log  2>&1 &
 
     echo $! > /var/run/ffmpeg_stream.pid
 }

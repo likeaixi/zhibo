@@ -131,8 +131,10 @@ stream_start() {
                                 -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
                                 -filter_complex \"\
-                                [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
-                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001',volume=${VOLUME}[aout]\" \
+                                [0:v][1:v]overlay=shortest=1[tmpv]; \
+                                [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
+                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001'[amixed];; \
+                                [amixed]volume=${VOLUME}[aout]\" \
                                 -map \"[vout]\" -map \"[aout]\" \
                                 -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
                                 -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
@@ -140,8 +142,10 @@ stream_start() {
                             ffmpeg -re -i \"\$video\" \
                                 -f lavfi -i \"color=black@${ALPHA}:s=\$RESOLUTION\" \
                                 -f lavfi -i \"sine=frequency=${FREQ}:duration=\$DURATION:sample_rate=44100\" \
-                                -filter_complex \"[0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]\" \
-                                -map \"[vout]\" -map 2:a \
+                                -filter_complex \"\
+                                  [0:v][1:v]overlay=shortest=1[tmpv]; \
+                                  [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
+                                  -map \"[vout]\" \
                                 -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \
                                 -c:a aac -b:a 128k -f flv \"$RTMP_URL\" 2>> \"$LOG_FILE\" || true
                         fi

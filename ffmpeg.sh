@@ -133,7 +133,7 @@ stream_start() {
                                 -filter_complex \"\
                                 [0:v][1:v]overlay=shortest=1[tmpv]; \
                                 [tmpv]eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
-                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001'[amixed];; \
+                                [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001'[amixed]; \
                                 [amixed]volume=${VOLUME}[aout]\" \
                                 -map \"[vout]\" -map \"[aout]\" \
                                 -c:v libx264 -preset veryfast -tune zerolatency -b:v $BITRATE -r $FRAMERATE -g 50 \

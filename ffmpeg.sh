@@ -92,6 +92,22 @@ stream_start() {
         save_config
     fi
 
+    # === 随机参数生成 ===
+
+    # 微亮度/对比度（±0.0001 ~ ±0.0005）
+    BRIGHTNESS=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
+    CONTRAST=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (rand() * 0.0005))}')
+
+    # 音量调整（1 ± 0.0001~0.0005）
+    VOLUME=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
+
+    # 高频音频频率 (19500Hz ~ 20000Hz)
+    FREQ=$(shuf -i 19500-20000 -n 1)
+
+    # 透明度 (alpha 0.001 ~ 0.005)
+    ALPHA=$(awk 'BEGIN{srand(); printf("%.4f", 0.001 + rand() * 0.004)}')
+
+
     echo -e "${yellow}开始后台推流。${font}"
     nohup bash -c '
         while true; do
@@ -106,22 +122,7 @@ stream_start() {
             for video in "${video_files[@]}"; do
                 if [ -f "$video" ]; then
                     echo "正在推流: $video" >> "'$LOG_FILE'"
-                        # === 随机参数生成 ===
-
-                        # 微亮度/对比度（±0.0001 ~ ±0.0005）
-                        BRIGHTNESS=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
-                        CONTRAST=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (rand() * 0.0005))}')
-
-                        # 音量调整（1 ± 0.0001~0.0005）
-                        VOLUME=$(awk -v r=$RANDOM 'BEGIN{srand(); printf("%.5f", 1 + (r % 2 == 0 ? 1 : -1) * (0.0001 + rand() * 0.0004))}')
-
-                        # 高频音频频率 (19500Hz ~ 20000Hz)
-                        FREQ=$(shuf -i 19500-20000 -n 1)
-
-                        # 透明度 (alpha 0.001 ~ 0.005)
-                        ALPHA=$(awk 'BEGIN{srand(); printf("%.4f", 0.001 + rand() * 0.004)}')
-
-                        # 获取输入分辨率
+                    # 获取输入分辨率
                         RESOLUTION=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$video")
 
                         echo "⚙️ Applying Filters:"
@@ -134,7 +135,7 @@ stream_start() {
                         echo ""
                     ffmpeg -re -i "$video" \
                      -f lavfi -i "color=black@${ALPHA}:s=${RESOLUTION}" \
-                     -f lavfi -i "sine=frequency=${FREQ}:duration=3600:sample_rate=44100" \
+                     -f lavfi -i "sine=frequency=${FREQ}:duration=$(ffprobe -i "$video" -show_entries format=duration -v quiet -of csv="p=0"):sample_rate=44100" \
                      -filter_complex "\
                      [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
                      [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001',volume=${VOLUME}[aout]" \

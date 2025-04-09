@@ -128,13 +128,13 @@ stream_start() {
                     echo "正在推流: $video" >> "'$LOG_FILE'"
 
                     echo "⚙️ Applying Filters:"
-                    echo "  Brightness: $BRIGHTNESS"
-                    echo "  Contrast:   $CONTRAST"
-                    echo "  Volume:     $VOLUME"
-                    echo "  Freq:       $FREQ Hz"
-                    echo "  Alpha:      $ALPHA"
-                    echo "  Resolution: $RESOLUTION"
-                    echo "  DURATION: $DURATION"
+                    echo "  Brightness: '$BRIGHTNESS'"
+                    echo "  Contrast:   '$CONTRAST'"
+                    echo "  Volume:     '$VOLUME'"
+                    echo "  Freq:       '$FREQ' Hz"
+                    echo "  Alpha:      '$ALPHA'"
+                    echo "  Resolution: '$RESOLUTION'"
+                    echo "  DURATION: '$DURATION'"
                     echo ""
                     if [ "$HAS_AUDIO" == "audio" ]; then
                       ffmpeg -re -i "$video" \

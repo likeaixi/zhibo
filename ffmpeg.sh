@@ -122,9 +122,9 @@ stream_start() {
             for video in "${video_files[@]}"; do
                 if [ -f "$video" ]; then
                     echo "正在推流: $video" >> "'$LOG_FILE'"
-                    # 获取输入分辨率
-                        RESOLUTION=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "$video")
-
+                        # 获取输入分辨率
+                        RESOLUTION=\$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x "\$video")
+                        DURATION=\$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "\$video")
                         echo "⚙️ Applying Filters:"
                         echo "  Brightness: $BRIGHTNESS"
                         echo "  Contrast:   $CONTRAST"
@@ -132,10 +132,11 @@ stream_start() {
                         echo "  Freq:       $FREQ Hz"
                         echo "  Alpha:      $ALPHA"
                         echo "  Resolution: $RESOLUTION"
+                        echo "  DURATION: $DURATION"
                         echo ""
                     ffmpeg -re -i "$video" \
-                     -f lavfi -i "color=black@${ALPHA}:s=${RESOLUTION}" \
-                     -f lavfi -i "sine=frequency=${FREQ}:duration=$(ffprobe -i "$video" -show_entries format=duration -v quiet -of csv="p=0"):sample_rate=44100" \
+                     -f lavfi -i "color=black@${ALPHA}:s=\${RESOLUTION}" \
+                     -f lavfi -i "sine=frequency=${FREQ}:duration=\${DURATION}:sample_rate=44100" \
                      -filter_complex "\
                      [0:v][1:v]overlay,eq=contrast=${CONTRAST}:brightness=${BRIGHTNESS}[vout]; \
                      [0:a][2:a]amix=inputs=2:duration=first:weights='1 0.0001',volume=${VOLUME}[aout]" \

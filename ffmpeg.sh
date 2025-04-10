@@ -68,7 +68,7 @@ clean_old_logs() {
 }
 
 stream_start() {
-    load_config
+#    load_config
 
     if [ -z "$RTMP_URL" ] || [ -z "$VIDEO_FOLDER" ] || [ -z "$BITRATE" ] || [ -z "$FRAMERATE" ]; then
         read -p "输入你的推流地址和推流码(rtmp协议): " RTMP_URL
